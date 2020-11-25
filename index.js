@@ -18,6 +18,7 @@ const {
   getMaxVotes,
   killPlayer,
   clearVotes,
+  clearProtection,
 } = require("./utils/rooms");
 
 const server = http.createServer(app);
@@ -104,6 +105,7 @@ io.on("connection", (socket) => {
             });
           }
           clearVotes(roomId);
+          clearProtection(roomId);
           io.to(roomId).emit("roomPlayer", getRoomById(roomId));
         }
       });
@@ -118,6 +120,9 @@ io.on("connection", (socket) => {
       } else if (type === "Kill") {
         hasVoted(getPlayerInRoom(roomId), from);
         targettedPlayer.votes.push(from);
+      } else if (type === "Protect") {
+        clearProtection(roomId);
+        targettedPlayer.isProtected = true;
       }
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     });

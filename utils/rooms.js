@@ -18,7 +18,13 @@ const getRoomById = (roomId) => {
 
 const addPlayer = (userName, roomId) => {
   const room = getRoomById(roomId);
-  const player = { name: userName, role: "", votes: [], isAlive: true };
+  const player = {
+    name: userName,
+    role: "",
+    votes: [],
+    isAlive: true,
+    isProtected: false,
+  };
   room.playerList.push(player);
 };
 
@@ -57,22 +63,22 @@ const hasVoted = (playerList, playerName) => {
 
 const getMaxVotes = (playerList) => {
   let hasEqualVote = false;
-  let mostVoted = { name: playerList[0].name, role: playerList[0].role };
+  let mostVoted = playerList[0];
   let maxVote = playerList[0].votes.length;
   for (let i = 0; i < playerList.length - 1; i++) {
     if (playerList[i + 1].votes.length > maxVote) {
-      mostVoted.name = playerList[i + 1].name;
-      mostVoted.role = playerList[i + 1].role;
+      mostVoted = playerList[i + 1];
       maxVote = playerList[i + 1].votes.length;
       hasEqualVote = false;
     } else if (playerList[i + 1].votes.length === maxVote) {
-      mostVoted.name = playerList[i + 1].name;
-      mostVoted.role = playerList[i + 1].role;
+      mostVoted = playerList[i + 1];
       maxVote = playerList[i + 1].votes.length;
       hasEqualVote = true;
     }
   }
   if (hasEqualVote) {
+    return null;
+  } else if (mostVoted.isProtected) {
     return null;
   } else {
     return mostVoted;
@@ -88,6 +94,20 @@ const clearVotes = (roomId) => {
   const room = getRoomById(roomId);
   room.playerList.forEach((player) => {
     player.votes = [];
+  });
+};
+
+const hasProtected = (playerList) => {
+  const player = playerList.find((player) => player.isProtected === true);
+  if (player) {
+    player.isProtected = false;
+  }
+};
+
+const clearProtection = (roomId) => {
+  const room = getRoomById(roomId);
+  room.playerList.forEach((player) => {
+    player.isProtected = false;
   });
 };
 
@@ -139,4 +159,5 @@ module.exports = {
   getMaxVotes,
   killPlayer,
   clearVotes,
+  clearProtection,
 };
