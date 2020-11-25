@@ -123,6 +123,8 @@ io.on("connection", (socket) => {
       } else if (type === "Protect") {
         clearProtection(roomId);
         targettedPlayer.isProtected = true;
+      } else if (type === "Check") {
+        socket.emit("reveal", { isWolf: targettedPlayer.role === "wolf" });
       }
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     });
