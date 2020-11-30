@@ -19,6 +19,7 @@ const {
   killPlayer,
   clearVotes,
   clearProtection,
+  switchTurn,
 } = require("./utils/rooms");
 
 const server = http.createServer(app);
@@ -79,11 +80,24 @@ io.on("connection", (socket) => {
     socket.on("start", () => {
       startGame(roomId);
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-
       const room = getRoomById(roomId);
-      socket.on("turnChange", ({ turn }) => {
-        room.turn = turn;
-        io.to(roomId).emit("changeTurn", room.turn);
+      io.to(roomId).emit("changeTurn", "gameStart");
+      socket.on("turnChange", () => {
+        const { newTurn, time } = switchTurn(room.turn);
+        console.log(room.playerList, room.turn);
+        // let count = time / 1000;
+        // if (count > 0) {
+        //   let timer = setInterval(() => {
+        //     console.log(count);
+        //     count -= 1;
+        //   }, 1000);
+        // }
+        setTimeout(() => {
+          room.turn = newTurn;
+          io.to(roomId).emit("changeTurn", room.turn);
+          // clearInterval(timer);
+        }, time);
+
         if (room.turn === "dayEnd") {
           const hangedPlayer = getMaxVotes(getPlayerInRoom(roomId));
           if (hangedPlayer) {

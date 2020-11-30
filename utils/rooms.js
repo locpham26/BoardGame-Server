@@ -136,6 +136,8 @@ const assignRole = (playerList) => {
       "guard",
       "witch",
     ];
+  } else if (playerList.length === 3) {
+    roles = ["wolf", "villager", "seer"];
   }
   roles = _.shuffle(roles);
   let i = 0;
@@ -143,6 +145,50 @@ const assignRole = (playerList) => {
     playerList[i].role = roles[i];
     i++;
   }
+};
+
+const switchTurn = (turn) => {
+  let newTurn;
+  let time;
+  switch (turn) {
+    case "gameStart":
+      newTurn = "nightStart";
+      time = 5000;
+      break;
+    case "nightStart":
+      newTurn = "guard";
+      time = 3000;
+      break;
+    case "villager":
+      newTurn = "dayEnd";
+      time = 10000;
+      break;
+    case "dayEnd":
+      newTurn = "nightStart";
+      time = 6000;
+      break;
+    case "guard":
+      newTurn = "wolf";
+      time = 6000;
+      break;
+    case "wolf":
+      newTurn = "seer";
+      time = 6000;
+      break;
+    case "seer":
+      newTurn = "dayStart";
+      time = 6000;
+      break;
+    case "dayStart":
+      newTurn = "villager";
+      time = 6000;
+      break;
+    default:
+      newTurn = "gameStart";
+      time = 100;
+      break;
+  }
+  return { newTurn: newTurn, time: time };
 };
 
 module.exports = {
@@ -160,4 +206,5 @@ module.exports = {
   killPlayer,
   clearVotes,
   clearProtection,
+  switchTurn,
 };
