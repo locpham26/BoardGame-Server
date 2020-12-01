@@ -24,7 +24,13 @@ const {
 
 const server = http.createServer(app);
 app.use(cors());
-const io = socketio(server);
+const io = socketio(server, {
+  cors: {
+    origin: "http://localhost:8080",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 require("./startup/logging")();
 require("./startup/routes")(app);
