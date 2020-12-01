@@ -91,17 +91,19 @@ io.on("connection", (socket) => {
       socket.on("turnChange", () => {
         const { newTurn, time } = switchTurn(room.turn);
         console.log(room.playerList, room.turn);
-        // let count = time / 1000;
-        // if (count > 0) {
-        //   let timer = setInterval(() => {
-        //     console.log(count);
-        //     count -= 1;
-        //   }, 1000);
-        // }
+
+        let count = time / 1000;
+        if (time > 100) {
+          let timer = setInterval(() => {
+            console.log(count);
+            if (count > 0) count -= 1;
+            else clearInterval(timer);
+          }, 1000);
+        }
+
         setTimeout(() => {
           room.turn = newTurn;
           io.to(roomId).emit("changeTurn", room.turn);
-          // clearInterval(timer);
         }, time);
 
         if (room.turn === "dayEnd") {
