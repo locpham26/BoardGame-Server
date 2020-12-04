@@ -2,14 +2,42 @@ const _ = require("lodash");
 
 const rooms = [];
 
+const roleActions = {
+  wolf: {
+    list: ["kill", "skip"],
+  },
+  guard: {
+    list: ["protect", "skip"],
+    lastProtected: "",
+  },
+  seer: {
+    list: ["check", "skip"],
+  },
+  witch: {
+    list: ["kill", "protect", "skip"],
+    kill: 1,
+    protect: 2,
+  },
+  villager: {
+    list: [],
+  },
+};
+
 const addRoom = (id) => {
   const room = { id, isStarted: false, turn: "", playerList: [] };
   rooms.push(room);
   return room;
 };
 
+const removeRoom = (roomId) => {
+  if (rooms.length > 0) {
+    const roomIndex = rooms.findIndex((room) => room.id === roomId);
+    rooms.splice(roomIndex, 1);
+  }
+};
+
 const getAllRooms = () => {
-  return rooms.filter((room) => room.playerList.length > 0);
+  return rooms.filter((room) => !room.isStarted);
 };
 
 const getRoomById = (roomId) => {
@@ -45,6 +73,7 @@ const startGame = (roomId) => {
   const room = getRoomById(roomId);
   room.isStarted = true;
   assignRole(room.playerList);
+  // assignActions(room.playerList);
 };
 
 const getPlayer = (roomId, playerName) => {
@@ -147,6 +176,12 @@ const assignRole = (playerList) => {
   }
 };
 
+const assignActions = (playerList) => {
+  playerList.forEach((player) => {
+    player.actions = roleActions[player.role].list;
+  });
+};
+
 const switchTurn = (turn) => {
   let newTurn;
   let time;
@@ -193,6 +228,7 @@ const switchTurn = (turn) => {
 
 module.exports = {
   addRoom,
+  removeRoom,
   getRoomById,
   getAllRooms,
   addPlayer,

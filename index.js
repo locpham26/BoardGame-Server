@@ -7,6 +7,7 @@ const app = express();
 
 const {
   addRoom,
+  removeRoom,
   getAllRooms,
   getRoomById,
   addPlayer,
@@ -26,10 +27,10 @@ const server = http.createServer(app);
 app.use(cors());
 const io = socketio(server, {
   cors: {
-    origin: "http://localhost:8080",
+    origin: "http://localhost:3001",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
 require("./startup/logging")();
@@ -67,90 +68,6 @@ io.on("connection", (socket) => {
 
     io.emit("room", getAllRooms());
 
-    socket.on("leave", () => {
-      removePlayer(userName, roomId);
-      socket.leave(roomId);
-      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-      socket.broadcast.to(roomId).emit("message", {
-        userName: "Admin",
-        text: `${userName} has left.`,
-        isFromWolf: false,
-      });
-      io.emit("room", getAllRooms());
-    });
-
-    socket.on("sendMessage", ({ text, isFromWolf }) => {
-      io.to(roomId).emit("message", { userName, text, isFromWolf });
-    });
-
-    socket.on("start", () => {
-      startGame(roomId);
-      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-      const room = getRoomById(roomId);
-      io.to(roomId).emit("changeTurn", "gameStart");
-      socket.on("turnChange", () => {
-        const { newTurn, time } = switchTurn(room.turn);
-        console.log(room.playerList, room.turn);
-
-        let count = time / 1000;
-        if (time > 100) {
-          let timer = setInterval(() => {
-            console.log(count);
-            if (count > 0) count -= 1;
-            else clearInterval(timer);
-          }, 1000);
-        }
-
-        setTimeout(() => {
-          room.turn = newTurn;
-          io.to(roomId).emit("changeTurn", room.turn);
-        }, time);
-
-        if (room.turn === "dayEnd") {
-          const hangedPlayer = getMaxVotes(getPlayerInRoom(roomId));
-          if (hangedPlayer) {
-            killPlayer(roomId, hangedPlayer.name);
-            io.to(roomId).emit("hang", {
-              name: hangedPlayer.name,
-              role: hangedPlayer.role,
-            });
-          }
-          clearVotes(roomId);
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-        } else if (room.turn === "dayStart") {
-          const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
-          if (killedPlayer) {
-            killPlayer(roomId, killedPlayer.name);
-            io.to(roomId).emit("kill", {
-              name: killedPlayer.name,
-              role: killedPlayer.role,
-            });
-          }
-          clearVotes(roomId);
-          clearProtection(roomId);
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-        }
-      });
-    });
-
-    socket.on("playerAction", ({ from, target, type }) => {
-      console.log(from, type, target);
-      const targettedPlayer = getPlayer(roomId, target);
-      if (type === "Vote") {
-        hasVoted(getPlayerInRoom(roomId), from);
-        targettedPlayer.votes.push(from);
-      } else if (type === "Kill") {
-        hasVoted(getPlayerInRoom(roomId), from);
-        targettedPlayer.votes.push(from);
-      } else if (type === "Protect") {
-        clearProtection(roomId);
-        targettedPlayer.isProtected = true;
-      } else if (type === "Check") {
-        socket.emit("reveal", { isWolf: targettedPlayer.role === "wolf" });
-      }
-      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
-    });
-
     socket.on("disconnect", () => {
       removePlayer(userName, roomId);
       socket.leave(roomId);
@@ -162,6 +79,103 @@ io.on("connection", (socket) => {
       });
       io.emit("room", getAllRooms());
     });
+  });
+
+  socket.on("leave", ({ userName, roomId }) => {
+    removePlayer(userName, roomId);
+    socket.leave(roomId);
+    io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+    socket.broadcast.to(roomId).emit("message", {
+      userName: "Admin",
+      text: `${userName} has left.`,
+      isFromWolf: false,
+    });
+    io.emit("room", getAllRooms());
+  });
+
+  socket.on("deleteRoom", ({ userName, roomId }) => {
+    removePlayer(userName, roomId);
+    socket.leave(roomId);
+    removeRoom(roomId);
+    io.emit("room", getAllRooms());
+  });
+
+  socket.on("start", ({ roomId }) => {
+    startGame(roomId);
+    io.emit("room", getAllRooms());
+    io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+    io.to(roomId).emit("changeTurn", "gameStart");
+  });
+
+  socket.on("sendMessage", ({ userName, text, isFromWolf, roomId }) => {
+    io.to(roomId).emit("message", { userName, text, isFromWolf });
+  });
+
+  socket.on("turnChange", ({ roomId }) => {
+    const room = getRoomById(roomId);
+    const { newTurn, time } = switchTurn(room.turn);
+    // console.log(room.playerList, room.turn);
+    console.log(socket.id);
+    let count = time / 1000;
+    if (time > 100) {
+      let timer = setInterval(() => {
+        if (count > 0) {
+          io.to(roomId).emit("countDown", count);
+          count -= 1;
+        } else clearInterval(timer);
+      }, 1000);
+    }
+
+    setTimeout(() => {
+      room.turn = newTurn;
+      io.to(roomId).emit("changeTurn", room.turn);
+    }, time);
+
+    if (room.turn === "dayEnd") {
+      const hangedPlayer = getMaxVotes(getPlayerInRoom(roomId));
+      if (hangedPlayer) {
+        killPlayer(roomId, hangedPlayer.name);
+        io.to(roomId).emit("hang", {
+          name: hangedPlayer.name,
+          role: hangedPlayer.role,
+        });
+      }
+      clearVotes(roomId);
+      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+    } else if (room.turn === "dayStart") {
+      const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
+      if (killedPlayer) {
+        killPlayer(roomId, killedPlayer.name);
+        io.to(roomId).emit("kill", {
+          name: killedPlayer.name,
+          role: killedPlayer.role,
+        });
+      }
+      clearVotes(roomId);
+      clearProtection(roomId);
+      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+    }
+  });
+
+  socket.on("playerAction", ({ from, target, type, roomId }) => {
+    console.log(from, type, target);
+    const targettedPlayer = getPlayer(roomId, target);
+    if (type === "vote") {
+      hasVoted(getPlayerInRoom(roomId), from);
+      targettedPlayer.votes.push(from);
+    } else if (type === "kill") {
+      hasVoted(getPlayerInRoom(roomId), from);
+      targettedPlayer.votes.push(from);
+    } else if (type === "protect") {
+      clearProtection(roomId);
+      targettedPlayer.isProtected = true;
+    } else if (type === "check") {
+      socket.emit("reveal", {
+        checkTarget: targettedPlayer.name,
+        isWolf: targettedPlayer.role === "wolf",
+      });
+    }
+    io.to(roomId).emit("roomPlayer", getRoomById(roomId));
   });
 });
 
