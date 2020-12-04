@@ -72,6 +72,7 @@ const getPlayerInRoom = (roomId) => {
 const startGame = (roomId) => {
   const room = getRoomById(roomId);
   room.isStarted = true;
+  room.protectedPlayer = "";
   assignRole(room.playerList);
   // assignActions(room.playerList);
 };
@@ -107,8 +108,6 @@ const getMaxVotes = (playerList) => {
   }
   if (hasEqualVote) {
     return null;
-  } else if (mostVoted.isProtected) {
-    return null;
   } else {
     return mostVoted;
   }
@@ -124,6 +123,13 @@ const clearVotes = (roomId) => {
   room.playerList.forEach((player) => {
     player.votes = [];
   });
+};
+
+const protectPlayer = (roomId, playerName) => {
+  const room = getRoomById(roomId);
+  if (playerName !== room.protectedPlayer) {
+    room.protectedPlayer = playerName;
+  }
 };
 
 const hasProtected = (playerList) => {
@@ -143,7 +149,7 @@ const clearProtection = (roomId) => {
 const assignRole = (playerList) => {
   let roles = [];
   if (playerList.length === 6) {
-    roles = ["wolf", "wolf", "villager", "villager", "seer", "guard"];
+    roles = ["wolf", "wolf", "witch", "villager", "seer", "guard"];
   } else if (playerList.length === 7) {
     roles = [
       "wolf",
@@ -242,5 +248,6 @@ module.exports = {
   killPlayer,
   clearVotes,
   clearProtection,
+  protectPlayer,
   switchTurn,
 };

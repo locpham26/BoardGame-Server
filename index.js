@@ -20,6 +20,7 @@ const {
   killPlayer,
   clearVotes,
   clearProtection,
+  protectPlayer,
   switchTurn,
 } = require("./utils/rooms");
 
@@ -69,7 +70,13 @@ io.on("connection", (socket) => {
     io.emit("room", getAllRooms());
 
     socket.on("disconnect", () => {
-      removePlayer(userName, roomId);
+      const room = getRoomById(roomId);
+      if (room.playerList.length > 1) {
+        removePlayer(userName, roomId);
+      } else if (room.playerList.length === 1) {
+        removePlayer(userName, roomId);
+        removeRoom(roomId);
+      }
       socket.leave(roomId);
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       socket.broadcast.to(roomId).emit("message", {
@@ -154,6 +161,9 @@ io.on("connection", (socket) => {
       clearVotes(roomId);
       clearProtection(roomId);
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+    } else if (room.turn === "guard") {
+      const protectedPlayer = room.protectedPlayer;
+      io.to(roomId).emit("lastProtected", protectedPlayer);
     }
   });
 
@@ -167,8 +177,7 @@ io.on("connection", (socket) => {
       hasVoted(getPlayerInRoom(roomId), from);
       targettedPlayer.votes.push(from);
     } else if (type === "protect") {
-      clearProtection(roomId);
-      targettedPlayer.isProtected = true;
+      protectPlayer(roomId, target);
     } else if (type === "check") {
       socket.emit("reveal", {
         checkTarget: targettedPlayer.name,
