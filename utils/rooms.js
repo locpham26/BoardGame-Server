@@ -172,7 +172,7 @@ const assignRole = (playerList) => {
       "witch",
     ];
   } else if (playerList.length === 3) {
-    roles = ["wolf", "villager", "seer"];
+    roles = ["wolf", "hunter", "seer"];
   }
   roles = _.shuffle(roles);
   let i = 0;
@@ -221,8 +221,16 @@ const switchTurn = (turn) => {
       time = 6000;
       break;
     case "dayStart":
-      newTurn = "villager";
+      newTurn = "dayEnd";
       time = 6000;
+      break;
+    case "hunter":
+      newTurn = "hunterShoot";
+      time = 6000;
+      break;
+    case "hunterShoot":
+      newTurn = "villager";
+      time = 3000;
       break;
     default:
       newTurn = "gameStart";

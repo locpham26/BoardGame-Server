@@ -120,9 +120,10 @@ io.on("connection", (socket) => {
 
   socket.on("turnChange", ({ roomId }) => {
     const room = getRoomById(roomId);
+    console.log(room.turn);
     const { newTurn, time } = switchTurn(room.turn);
     // console.log(room.playerList, room.turn);
-    console.log(socket.id);
+    console.log(newTurn);
     let count = time / 1000;
     if (time > 100) {
       let timer = setInterval(() => {
@@ -133,7 +134,7 @@ io.on("connection", (socket) => {
       }, 1000);
     }
 
-    setTimeout(() => {
+    let timeout = setTimeout(() => {
       room.turn = newTurn;
       io.to(roomId).emit("changeTurn", room.turn);
     }, time);
@@ -157,6 +158,14 @@ io.on("connection", (socket) => {
           name: killedPlayer.name,
           role: killedPlayer.role,
         });
+        if (killedPlayer.role === "hunter") {
+          setTimeout(() => {
+            clearTimeout(timeout);
+            room.turn = "hunter";
+            console.log(3);
+            io.to(roomId).emit("changeTurn", "hunter");
+          }, 3000);
+        }
       }
       clearVotes(roomId);
       clearProtection(roomId);
@@ -183,6 +192,9 @@ io.on("connection", (socket) => {
         checkTarget: targettedPlayer.name,
         isWolf: targettedPlayer.role === "wolf",
       });
+    } else if (type === "shoot") {
+      targettedPlayer.isAlive = false;
+      io.to(roomId).emit("hunterShoot", targettedPlayer);
     }
     io.to(roomId).emit("roomPlayer", getRoomById(roomId));
   });
