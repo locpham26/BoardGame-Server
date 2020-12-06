@@ -28,7 +28,7 @@ const server = http.createServer(app);
 app.use(cors());
 const io = socketio(server, {
   cors: {
-    origin: "http://localhost:3001",
+    origin: "http://localhost:8080",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -121,12 +121,11 @@ io.on("connection", (socket) => {
   socket.on("turnChange", ({ roomId }) => {
     const room = getRoomById(roomId);
     const { newTurn, time } = switchTurn(room.turn);
-    // console.log(room.playerList, room.turn);
     console.log(socket.id);
-    let count = time / 1000;
+    let count = time / 1000 - 1;
     if (time > 100) {
       let timer = setInterval(() => {
-        if (count > 0) {
+        if (count > -1) {
           io.to(roomId).emit("countDown", count);
           count -= 1;
         } else clearInterval(timer);
