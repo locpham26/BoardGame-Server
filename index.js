@@ -73,6 +73,7 @@ io.on("connection", (socket) => {
     io.emit("room", getAllRooms());
 
     socket.on("disconnect", () => {
+      console.log(roomId);
       const room = getRoomById(roomId);
       if (room.playerList.length > 1) {
         removePlayer(userName, roomId);
@@ -137,7 +138,7 @@ io.on("connection", (socket) => {
     let timeout = setTimeout(() => {
       room.turn = newTurn;
       io.to(roomId).emit("changeTurn", room.turn);
-    }, time + 200);
+    }, time + 300);
 
     if (room.turn === "dayEnd") {
       const mostVoted = getMaxVotes(getPlayerInRoom(roomId));
@@ -188,19 +189,24 @@ io.on("connection", (socket) => {
       hasVoted(getPlayerInRoom(roomId), from);
       targettedPlayer.votes.push(from);
     } else if (type === "protect") {
+      io.to(roomId).emit("disable", type);
       protectPlayer(roomId, target);
     } else if (type === "check") {
+      io.to(roomId).emit("disable", type);
       socket.emit("reveal", {
         checkTarget: targettedPlayer.name,
         isWolf: targettedPlayer.role === "wolf",
       });
     } else if (type === "shoot") {
+      io.to(roomId).emit("disable", type);
       targettedPlayer.isAlive = false;
       io.to(roomId).emit("hunterShoot", targettedPlayer.name);
     } else if (type === "save") {
       savePlayer(roomId, target);
+      io.to(roomId).emit("disable", type);
     } else if (type === "poison") {
       poisonPlayer(roomId, target);
+      io.to(roomId).emit("disable", type);
     }
     io.to(roomId).emit("roomPlayer", getRoomById(roomId));
   });
