@@ -18,9 +18,12 @@ const {
   hasVoted,
   getMaxVotes,
   killPlayer,
+  hangPlayer,
   clearVotes,
-  clearProtection,
+  savePlayer,
   protectPlayer,
+  poisonPlayer,
+  getHunter,
   switchTurn,
 } = require("./utils/rooms");
 
@@ -120,9 +123,7 @@ io.on("connection", (socket) => {
 
   socket.on("turnChange", ({ roomId }) => {
     const room = getRoomById(roomId);
-    console.log(room.turn);
     const { newTurn, time } = switchTurn(room.turn);
-    console.log(socket.id);
     let count = time / 1000 - 1;
     if (time > 100) {
       let timer = setInterval(() => {
@@ -136,42 +137,44 @@ io.on("connection", (socket) => {
     let timeout = setTimeout(() => {
       room.turn = newTurn;
       io.to(roomId).emit("changeTurn", room.turn);
-    }, time + 500);
+    }, time + 200);
 
     if (room.turn === "dayEnd") {
-      const hangedPlayer = getMaxVotes(getPlayerInRoom(roomId));
-      if (hangedPlayer) {
-        killPlayer(roomId, hangedPlayer.name);
-        io.to(roomId).emit("hang", {
-          name: hangedPlayer.name,
-          role: hangedPlayer.role,
-        });
+      const mostVoted = getMaxVotes(getPlayerInRoom(roomId));
+      io.to(roomId).emit("hang", mostVoted);
+      if (mostVoted) {
+        hangPlayer(roomId, mostVoted);
       }
       clearVotes(roomId);
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     } else if (room.turn === "dayStart") {
-      const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
-      if (killedPlayer) {
-        killPlayer(roomId, killedPlayer.name);
-        io.to(roomId).emit("kill", {
-          name: killedPlayer.name,
-          role: killedPlayer.role,
-        });
-        if (killedPlayer.role === "hunter") {
-          setTimeout(() => {
-            clearTimeout(timeout);
-            room.turn = "hunter";
-            console.log(3);
-            io.to(roomId).emit("changeTurn", "hunter");
-          }, 3000);
-        }
+      let killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
+      let poisonedPlayer = room.poisonedPlayer;
+      const hunter = getHunter(roomId);
+      if (killedPlayer !== "") {
+        killedPlayer = killPlayer(roomId, killedPlayer);
+      }
+      if (poisonedPlayer !== "") {
+        poisonedPlayer = killPlayer(roomId, poisonedPlayer);
+      }
+      io.to(roomId).emit("kill", { killedPlayer, poisonedPlayer });
+      if (!hunter.isAlive) {
+        setTimeout(() => {
+          clearTimeout(timeout);
+          room.turn = "hunter";
+          io.to(roomId).emit("changeTurn", "hunter");
+        }, 3000);
       }
       clearVotes(roomId);
-      clearProtection(roomId);
+      room.savedPlayer = "";
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     } else if (room.turn === "guard") {
       const protectedPlayer = room.protectedPlayer;
       io.to(roomId).emit("lastProtected", protectedPlayer);
+      room.protectedPlayer = "";
+    } else if (room.turn === "witch") {
+      const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
+      io.to(roomId).emit("killedByWolf", killedPlayer);
     }
   });
 
@@ -193,7 +196,11 @@ io.on("connection", (socket) => {
       });
     } else if (type === "shoot") {
       targettedPlayer.isAlive = false;
-      io.to(roomId).emit("hunterShoot", targettedPlayer);
+      io.to(roomId).emit("hunterShoot", targettedPlayer.name);
+    } else if (type === "save") {
+      savePlayer(roomId, target);
+    } else if (type === "poison") {
+      poisonPlayer(roomId, target);
     }
     io.to(roomId).emit("roomPlayer", getRoomById(roomId));
   });

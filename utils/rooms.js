@@ -2,27 +2,6 @@ const _ = require("lodash");
 
 const rooms = [];
 
-const roleActions = {
-  wolf: {
-    list: ["kill", "skip"],
-  },
-  guard: {
-    list: ["protect", "skip"],
-    lastProtected: "",
-  },
-  seer: {
-    list: ["check", "skip"],
-  },
-  witch: {
-    list: ["kill", "protect", "skip"],
-    kill: 1,
-    protect: 2,
-  },
-  villager: {
-    list: [],
-  },
-};
-
 const addRoom = (id) => {
   const room = { id, isStarted: false, turn: "", playerList: [] };
   rooms.push(room);
@@ -51,7 +30,6 @@ const addPlayer = (userName, roomId) => {
     role: "",
     votes: [],
     isAlive: true,
-    isProtected: false,
   };
   room.playerList.push(player);
 };
@@ -73,8 +51,9 @@ const startGame = (roomId) => {
   const room = getRoomById(roomId);
   room.isStarted = true;
   room.protectedPlayer = "";
+  room.savedPlayer = "";
+  room.poisonedPlayer = "";
   assignRole(room.playerList);
-  // assignActions(room.playerList);
 };
 
 const getPlayer = (roomId, playerName) => {
@@ -93,29 +72,43 @@ const hasVoted = (playerList, playerName) => {
 
 const getMaxVotes = (playerList) => {
   let hasEqualVote = false;
-  let mostVoted = playerList[0];
+  let mostVoted = playerList[0].name;
   let maxVote = playerList[0].votes.length;
   for (let i = 0; i < playerList.length - 1; i++) {
     if (playerList[i + 1].votes.length > maxVote) {
-      mostVoted = playerList[i + 1];
+      mostVoted = playerList[i + 1].name;
       maxVote = playerList[i + 1].votes.length;
       hasEqualVote = false;
     } else if (playerList[i + 1].votes.length === maxVote) {
-      mostVoted = playerList[i + 1];
+      mostVoted = playerList[i + 1].name;
       maxVote = playerList[i + 1].votes.length;
       hasEqualVote = true;
     }
   }
   if (hasEqualVote) {
-    return null;
+    return "";
   } else {
     return mostVoted;
   }
 };
 
 const killPlayer = (roomId, playerName) => {
+  const room = getRoomById(roomId);
   const killed = getPlayer(roomId, playerName);
-  killed.isAlive = false;
+  if (
+    killed.name !== room.protectedPlayer &&
+    killed.name !== room.savedPlayer
+  ) {
+    killed.isAlive = false;
+    return killed.name;
+  } else {
+    return "";
+  }
+};
+
+const hangPlayer = (roomId, playerName) => {
+  const hanged = getPlayer(roomId, playerName);
+  hanged.isAlive = false;
 };
 
 const clearVotes = (roomId) => {
@@ -132,24 +125,30 @@ const protectPlayer = (roomId, playerName) => {
   }
 };
 
-const hasProtected = (playerList) => {
-  const player = playerList.find((player) => player.isProtected === true);
-  if (player) {
-    player.isProtected = false;
+const savePlayer = (roomId, playerName) => {
+  const room = getRoomById(roomId);
+  if (playerName !== room.savedPlayer) {
+    room.savedPlayer = playerName;
   }
 };
 
-const clearProtection = (roomId) => {
+const poisonPlayer = (roomId, playerName) => {
   const room = getRoomById(roomId);
-  room.playerList.forEach((player) => {
-    player.isProtected = false;
-  });
+  room.poisonedPlayer = playerName;
+};
+
+const getHunter = (roomId) => {
+  const room = getRoomById(roomId);
+  const hunter = room.playerList.find((player) => player.role === "hunter");
+  return hunter;
 };
 
 const assignRole = (playerList) => {
   let roles = [];
   if (playerList.length === 6) {
     roles = ["wolf", "wolf", "witch", "villager", "seer", "guard"];
+  } else if (playerList.length === 4) {
+    roles = ["wolf", "witch", "hunter", "guard"];
   } else if (playerList.length === 7) {
     roles = [
       "wolf",
@@ -172,7 +171,7 @@ const assignRole = (playerList) => {
       "witch",
     ];
   } else if (playerList.length === 3) {
-    roles = ["wolf", "hunter", "seer"];
+    roles = ["wolf", "hunter", "witch"];
   }
   roles = _.shuffle(roles);
   let i = 0;
@@ -180,12 +179,6 @@ const assignRole = (playerList) => {
     playerList[i].role = roles[i];
     i++;
   }
-};
-
-const assignActions = (playerList) => {
-  playerList.forEach((player) => {
-    player.actions = roleActions[player.role].list;
-  });
 };
 
 const switchTurn = (turn) => {
@@ -213,6 +206,10 @@ const switchTurn = (turn) => {
       time = 6000;
       break;
     case "wolf":
+      newTurn = "witch";
+      time = 6000;
+      break;
+    case "witch":
       newTurn = "seer";
       time = 6000;
       break;
@@ -234,7 +231,7 @@ const switchTurn = (turn) => {
       break;
     default:
       newTurn = "gameStart";
-      time = 100;
+      time = 0;
       break;
   }
   return { newTurn: newTurn, time: time };
@@ -254,8 +251,11 @@ module.exports = {
   hasVoted,
   getMaxVotes,
   killPlayer,
+  hangPlayer,
   clearVotes,
-  clearProtection,
   protectPlayer,
+  savePlayer,
+  poisonPlayer,
+  getHunter,
   switchTurn,
 };
