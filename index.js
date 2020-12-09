@@ -25,6 +25,8 @@ const {
   poisonPlayer,
   getHunter,
   switchTurn,
+  checkWin,
+  endGame,
 } = require("./utils/rooms");
 
 const server = http.createServer(app);
@@ -150,9 +152,30 @@ io.on("connection", (socket) => {
       }, time + 300);
       if (room.turn === "dayEnd") {
         const mostVoted = getMaxVotes(getPlayerInRoom(roomId));
+        const hunter = getHunter(roomId);
         io.to(roomId).emit("hang", mostVoted);
         if (mostVoted) {
           hangPlayer(roomId, mostVoted);
+        }
+        if (checkWin(roomId)) {
+          setTimeout(() => {
+            clearTimeout(timeout);
+            room.turn = "gameEnd";
+            io.to(roomId).emit("changeTurn", {
+              roomTurn: "gameEnd",
+              skipped: false,
+            });
+            io.to(roomId).emit("win", checkWin(roomId));
+          }, 3000);
+        } else if (hunter.name === mostVoted) {
+          setTimeout(() => {
+            clearTimeout(timeout);
+            room.turn = "hunterDay";
+            io.to(roomId).emit("changeTurn", {
+              roomTurn: "hunterDay",
+              skipped: false,
+            });
+          }, 3000);
         }
         clearVotes(roomId);
         io.to(roomId).emit("roomPlayer", getRoomById(roomId));
@@ -167,12 +190,25 @@ io.on("connection", (socket) => {
           poisonedPlayer = killPlayer(roomId, poisonedPlayer);
         }
         io.to(roomId).emit("kill", { killedPlayer, poisonedPlayer });
-        if (hunter.name === killedPlayer || hunter.name === poisonedPlayer) {
+        if (checkWin(roomId)) {
           setTimeout(() => {
             clearTimeout(timeout);
-            room.turn = "hunter";
+            room.turn = "gameEnd";
             io.to(roomId).emit("changeTurn", {
-              roomTurn: "hunter",
+              roomTurn: "gameEnd",
+              skipped: false,
+            });
+            io.to(roomId).emit("win", checkWin(roomId));
+          }, 3000);
+        } else if (
+          hunter.name === killedPlayer ||
+          hunter.name === poisonedPlayer
+        ) {
+          setTimeout(() => {
+            clearTimeout(timeout);
+            room.turn = "hunterDay";
+            io.to(roomId).emit("changeTurn", {
+              roomTurn: "hunterDay",
               skipped: false,
             });
           }, 3000);
@@ -187,6 +223,10 @@ io.on("connection", (socket) => {
       } else if (room.turn === "witch") {
         const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
         io.to(roomId).emit("killedByWolf", killedPlayer);
+      } else if (room.turn === "end") {
+        clearTimeout(timeout);
+        endGame(roomId);
+        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       }
     }
   });
