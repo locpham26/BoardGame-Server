@@ -123,23 +123,25 @@ io.on("connection", (socket) => {
   });
 
   let timeout;
+  let timer;
 
   socket.on("turnChange", ({ roomId, skipped }) => {
     const room = getRoomById(roomId);
     const { newTurn, time } = switchTurn(room.turn);
     let count = time / 1000 - 1;
+    clearTimeout(timeout);
+    clearInterval(timer)
     if (skipped) {
-      clearTimeout(timeout);
       room.turn = newTurn;
       io.to(roomId).emit("changeTurn", { roomTurn: room.turn, skipped: false });
     } else {
       if (time > 100) {
-        let timer = setInterval(() => {
+        timer = setInterval(() => {
           if (count > -1) {
             io.to(roomId).emit("countDown", count);
             count -= 1;
           } else clearInterval(timer);
-        }, 1000);
+        }, 1000 );
       }
       timeout = setTimeout(() => {
         room.turn = newTurn;
