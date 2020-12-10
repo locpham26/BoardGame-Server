@@ -47,6 +47,32 @@ const getPlayerInRoom = (roomId) => {
   return room.playerList;
 };
 
+const getAllWolves = (roomId) => {
+  const room = getRoomById(roomId);
+  return room.playerList.filter(
+    (player) => player.isAlive && player.role === "wolf"
+  ).length;
+};
+
+const getAllHuman = (roomId) => {
+  const room = getRoomById(roomId);
+  return room.playerList.filter(
+    (player) => player.isAlive && player.role !== "wolf"
+  ).length;
+};
+
+const checkWin = (roomId) => {
+  console.log(getAllWolves(roomId));
+  console.log(getAllHuman(roomId));
+  if (getAllWolves(roomId) === getAllHuman(roomId)) {
+    return "wolf";
+  } else if (getAllWolves(roomId) === 0) {
+    return "human";
+  } else {
+    return null;
+  }
+};
+
 const startGame = (roomId) => {
   const room = getRoomById(roomId);
   room.isStarted = true;
@@ -54,6 +80,16 @@ const startGame = (roomId) => {
   room.savedPlayer = "";
   room.poisonedPlayer = "";
   assignRole(room.playerList);
+};
+
+const endGame = (roomId) => {
+  const room = getRoomById(roomId);
+  room.isStarted = false;
+  room.turn = "";
+  room.protectedPlayer = "";
+  room.savedPlayer = "";
+  room.poisonedPlayer = "";
+  room.playerList.forEach((player) => (player.isAlive = true));
 };
 
 const getPlayer = (roomId, playerName) => {
@@ -218,15 +254,27 @@ const switchTurn = (turn) => {
       time = 6000;
       break;
     case "dayStart":
-      newTurn = "dayEnd";
-      time = 6000;
-      break;
-    case "hunter":
-      newTurn = "hunterShoot";
-      time = 6000;
-      break;
-    case "hunterShoot":
       newTurn = "villager";
+      time = 6000;
+      break;
+    case "hunterDay":
+      newTurn = "hunterShootDay";
+      time = 6000;
+      break;
+    case "hunterShootDay":
+      newTurn = "villager";
+      time = 3000;
+      break;
+    case "hunterNight":
+      newTurn = "hunterShootNight";
+      time = 6000;
+      break;
+    case "hunterShootNight":
+      newTurn = "nightStart";
+      time = 3000;
+      break;
+    case "gameEnd":
+      newTurn = "end";
       time = 3000;
       break;
     default:
@@ -258,4 +306,6 @@ module.exports = {
   poisonPlayer,
   getHunter,
   switchTurn,
+  checkWin,
+  endGame,
 };
