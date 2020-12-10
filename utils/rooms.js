@@ -11,12 +11,12 @@ const addRoom = (id) => {
 const removeRoom = (roomId) => {
   if (rooms.length > 0) {
     const roomIndex = rooms.findIndex((room) => room.id === roomId);
-    rooms.splice(roomIndex, 1);
+    if (roomIndex) rooms.splice(roomIndex, 1);
   }
 };
 
 const getAllRooms = () => {
-  return rooms.filter((room) => !room.isStarted);
+  return rooms.filter((room) => !room.isStarted && room.playerList.length > 0);
 };
 
 const getRoomById = (roomId) => {
@@ -25,45 +25,53 @@ const getRoomById = (roomId) => {
 
 const addPlayer = (userName, roomId) => {
   const room = getRoomById(roomId);
-  const player = {
-    name: userName,
-    role: "",
-    votes: [],
-    isAlive: true,
-  };
-  room.playerList.push(player);
+  if (room) {
+    const player = {
+      name: userName,
+      role: "",
+      votes: [],
+      isAlive: true,
+    };
+    room.playerList.push(player);
+  }
 };
 
 const removePlayer = (userName, roomId) => {
   const room = getRoomById(roomId);
-  const index = room.playerList.findIndex((player) => player.name === userName);
-  if (index !== -1) {
-    room.playerList.splice(index, 1);
+  if (room) {
+    const index = room.playerList.findIndex(
+      (player) => player.name === userName
+    );
+    if (index !== -1) {
+      room.playerList.splice(index, 1);
+    }
   }
 };
 
 const getPlayerInRoom = (roomId) => {
   const room = getRoomById(roomId);
-  return room.playerList;
+  if (room) return room.playerList;
 };
 
 const getAllWolves = (roomId) => {
   const room = getRoomById(roomId);
-  return room.playerList.filter(
-    (player) => player.isAlive && player.role === "wolf"
-  ).length;
+  if (room) {
+    return room.playerList.filter(
+      (player) => player.isAlive && player.role === "wolf"
+    ).length;
+  }
 };
 
 const getAllHuman = (roomId) => {
   const room = getRoomById(roomId);
-  return room.playerList.filter(
-    (player) => player.isAlive && player.role !== "wolf"
-  ).length;
+  if (room) {
+    return room.playerList.filter(
+      (player) => player.isAlive && player.role !== "wolf"
+    ).length;
+  }
 };
 
 const checkWin = (roomId) => {
-  console.log(getAllWolves(roomId));
-  console.log(getAllHuman(roomId));
   if (getAllWolves(roomId) === getAllHuman(roomId)) {
     return "wolf";
   } else if (getAllWolves(roomId) === 0) {
@@ -75,27 +83,37 @@ const checkWin = (roomId) => {
 
 const startGame = (roomId) => {
   const room = getRoomById(roomId);
-  room.isStarted = true;
-  room.protectedPlayer = "";
-  room.savedPlayer = "";
-  room.poisonedPlayer = "";
-  assignRole(room.playerList);
+  if (room) {
+    room.isStarted = true;
+    room.protectedPlayer = "";
+    room.savedPlayer = "";
+    room.poisonedPlayer = "";
+    room.skippedVotes = 0;
+    assignRole(room.playerList);
+  }
 };
 
 const endGame = (roomId) => {
   const room = getRoomById(roomId);
-  room.isStarted = false;
-  room.turn = "";
-  room.protectedPlayer = "";
-  room.savedPlayer = "";
-  room.poisonedPlayer = "";
-  room.playerList.forEach((player) => (player.isAlive = true));
+  if (room) {
+    room.isStarted = false;
+    room.turn = "";
+    room.protectedPlayer = "";
+    room.savedPlayer = "";
+    room.poisonedPlayer = "";
+    room.playerList.forEach((player) => {
+      player.isAlive = true;
+      player.role = "";
+    });
+  }
 };
 
 const getPlayer = (roomId, playerName) => {
   const room = getRoomById(roomId);
-  const player = room.playerList.find((player) => player.name === playerName);
-  return player;
+  if (room) {
+    const player = room.playerList.find((player) => player.name === playerName);
+    return player;
+  }
 };
 
 const hasVoted = (playerList, playerName) => {
@@ -130,15 +148,17 @@ const getMaxVotes = (playerList) => {
 
 const killPlayer = (roomId, playerName) => {
   const room = getRoomById(roomId);
-  const killed = getPlayer(roomId, playerName);
-  if (
-    killed.name !== room.protectedPlayer &&
-    killed.name !== room.savedPlayer
-  ) {
-    killed.isAlive = false;
-    return killed.name;
-  } else {
-    return "";
+  if (room) {
+    const killed = getPlayer(roomId, playerName);
+    if (
+      killed.name !== room.protectedPlayer &&
+      killed.name !== room.savedPlayer
+    ) {
+      killed.isAlive = false;
+      return killed.name;
+    } else {
+      return "";
+    }
   }
 };
 
@@ -149,34 +169,44 @@ const hangPlayer = (roomId, playerName) => {
 
 const clearVotes = (roomId) => {
   const room = getRoomById(roomId);
-  room.playerList.forEach((player) => {
-    player.votes = [];
-  });
+  if (room) {
+    room.playerList.forEach((player) => {
+      player.votes = [];
+    });
+  }
 };
 
 const protectPlayer = (roomId, playerName) => {
   const room = getRoomById(roomId);
-  if (playerName !== room.protectedPlayer) {
-    room.protectedPlayer = playerName;
+  if (room) {
+    if (playerName !== room.protectedPlayer) {
+      room.protectedPlayer = playerName;
+    }
   }
 };
 
 const savePlayer = (roomId, playerName) => {
   const room = getRoomById(roomId);
-  if (playerName !== room.savedPlayer) {
-    room.savedPlayer = playerName;
+  if (room) {
+    if (playerName !== room.savedPlayer) {
+      room.savedPlayer = playerName;
+    }
   }
 };
 
 const poisonPlayer = (roomId, playerName) => {
-  const room = getRoomById(roomId);
-  room.poisonedPlayer = playerName;
+  if (room) {
+    const room = getRoomById(roomId);
+    room.poisonedPlayer = playerName;
+  }
 };
 
 const getHunter = (roomId) => {
   const room = getRoomById(roomId);
-  const hunter = room.playerList.find((player) => player.role === "hunter");
-  return hunter;
+  if (room) {
+    const hunter = room.playerList.find((player) => player.role === "hunter");
+    return hunter;
+  }
 };
 
 const assignRole = (playerList) => {
@@ -207,7 +237,7 @@ const assignRole = (playerList) => {
       "witch",
     ];
   } else if (playerList.length === 3) {
-    roles = ["wolf", "hunter", "witch"];
+    roles = ["wolf", "wolf", "witch"];
   }
   roles = _.shuffle(roles);
   let i = 0;
@@ -305,6 +335,7 @@ module.exports = {
   savePlayer,
   poisonPlayer,
   getHunter,
+  getAllWolves,
   switchTurn,
   checkWin,
   endGame,
