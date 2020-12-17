@@ -195,8 +195,8 @@ const savePlayer = (roomId, playerName) => {
 };
 
 const poisonPlayer = (roomId, playerName) => {
+  const room = getRoomById(roomId);
   if (room) {
-    const room = getRoomById(roomId);
     room.poisonedPlayer = playerName;
   }
 };
@@ -237,7 +237,7 @@ const assignRole = (playerList) => {
       "witch",
     ];
   } else if (playerList.length === 3) {
-    roles = ["wolf", "wolf", "witch"];
+    roles = ["wolf", "hunter", "witch"];
   }
   roles = _.shuffle(roles);
   let i = 0;

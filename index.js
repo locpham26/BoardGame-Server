@@ -93,7 +93,7 @@ io.on("connection", (socket) => {
       const room = getRoomById(roomId);
       if (room && room.playerList.length > 1) {
         removePlayer(userName, roomId);
-      } else if (room.playerList.length === 1) {
+      } else if (room && room.playerList.length === 1) {
         removePlayer(userName, roomId);
         removeRoom(roomId);
       }
