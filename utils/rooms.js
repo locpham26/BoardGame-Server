@@ -72,7 +72,7 @@ const getAllHuman = (roomId) => {
 };
 
 const checkWin = (roomId) => {
-  if (getAllWolves(roomId) === getAllHuman(roomId)) {
+  if (getAllWolves(roomId) >= getAllHuman(roomId)) {
     return "wolf";
   } else if (getAllWolves(roomId) === 0) {
     return "human";
