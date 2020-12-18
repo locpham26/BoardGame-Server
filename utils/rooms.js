@@ -117,10 +117,14 @@ const getPlayer = (roomId, playerName) => {
 };
 
 const hasVoted = (playerList, playerName) => {
-  const player = playerList.find((player) => player.votes.includes(playerName));
-  if (player) {
-    const voteIndex = player.votes.findIndex((vote) => vote === playerName);
-    player.votes.splice(voteIndex, 1);
+  if (playerList) {
+    const player = playerList.find((player) =>
+      player.votes.includes(playerName)
+    );
+    if (player) {
+      const voteIndex = player.votes.findIndex((vote) => vote === playerName);
+      player.votes.splice(voteIndex, 1);
+    }
   }
 };
 
@@ -212,7 +216,7 @@ const getHunter = (roomId) => {
 const assignRole = (playerList) => {
   let roles = [];
   if (playerList.length === 6) {
-    roles = ["wolf", "wolf", "witch", "villager", "seer", "guard"];
+    roles = ["wolf", "hunter", "witch", "villager", "seer", "guard"];
   } else if (playerList.length === 4) {
     roles = ["wolf", "witch", "hunter", "guard"];
   } else if (playerList.length === 7) {
@@ -288,18 +292,18 @@ const switchTurn = (turn) => {
       time = 6000;
       break;
     case "hunterDay":
-      newTurn = "hunterShootDay";
+      newTurn = "shootDay";
       time = 6000;
       break;
-    case "hunterShootDay":
+    case "shootDay":
       newTurn = "villager";
       time = 3000;
       break;
     case "hunterNight":
-      newTurn = "hunterShootNight";
+      newTurn = "shootNight";
       time = 6000;
       break;
-    case "hunterShootNight":
+    case "shootNight":
       newTurn = "nightStart";
       time = 3000;
       break;

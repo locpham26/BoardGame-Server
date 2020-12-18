@@ -198,17 +198,18 @@ io.on("connection", (socket) => {
         } else if (hunter && hunter.name === mostVoted) {
           setTimeout(() => {
             clearTimeout(timeout);
-            room.turn = "hunterDay";
+            room.turn = "hunterNight";
             io.to(roomId).emit("changeTurn", {
-              roomTurn: "hunterDay",
+              roomTurn: "hunterNight",
               skipped: false,
             });
           }, 3000);
+        } else {
+          clearVotes(roomId);
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
         }
-
-        clearVotes(roomId);
-        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       } else if (room.turn === "dayStart") {
+        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
         room.skippedVotes = 0;
         let killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
         let poisonedPlayer = room.poisonedPlayer;
@@ -244,10 +245,13 @@ io.on("connection", (socket) => {
               skipped: false,
             });
           }, 3000);
+        } else {
+          room.savedPlayer = "";
+          room.poisonedPlayer = "";
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
         }
-
+      } else if (room.turn === "villager" || room.turn === "nightStart") {
         clearVotes(roomId);
-        room.savedPlayer = "";
         io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       } else if (room.turn === "guard") {
         const protectedPlayer = room.protectedPlayer;
@@ -256,6 +260,8 @@ io.on("connection", (socket) => {
       } else if (room.turn === "witch") {
         const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
         io.to(roomId).emit("killedByWolf", killedPlayer);
+      } else if (room.turn === "shootDay" || room.turn === "shootNight") {
+        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       } else if (room.turn === "end") {
         clearTimeout(timeout);
         endGame(roomId);
@@ -295,6 +301,7 @@ io.on("connection", (socket) => {
     if (type === "vote") {
       hasVoted(getPlayerInRoom(roomId), from);
       targettedPlayer.votes.push(from);
+      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     } else if (type === "kill") {
       socket.emit("disable", ["kill", "skip"]);
       targettedPlayer.votes.push(from);
@@ -305,6 +312,7 @@ io.on("connection", (socket) => {
           skipped: true,
         });
       }
+      io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     } else if (type === "protect") {
       socket.emit("disable", ["protect"]);
       protectPlayer(roomId, target);
@@ -327,7 +335,6 @@ io.on("connection", (socket) => {
     } else if (type === "skip") {
       socket.emit("disable", ["vote", "kill", "skip"]);
     }
-    io.to(roomId).emit("roomPlayer", getRoomById(roomId));
   });
 });
 
