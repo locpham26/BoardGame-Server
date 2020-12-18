@@ -97,6 +97,7 @@ io.on("connection", (socket) => {
         removePlayer(userName, roomId);
         removeRoom(roomId);
       }
+      hasVoted(getPlayerInRoom(roomId), userName);
 
       socket.leave(roomId);
 
@@ -113,6 +114,7 @@ io.on("connection", (socket) => {
 
   socket.on("leave", ({ userName, roomId }) => {
     removePlayer(userName, roomId);
+    hasVoted(getPlayerInRoom(roomId), userName);
     socket.leave(roomId);
     io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     socket.broadcast.to(roomId).emit("message", {
