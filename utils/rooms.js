@@ -358,7 +358,6 @@ module.exports = {
   getPlayerInRoom,
   removePlayer,
   startGame,
-  assignRole,
   getPlayer,
   hasVoted,
   getMaxVotes,

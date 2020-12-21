@@ -56,12 +56,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("searchRoom", ({ roomId }) => {
-    const room = getRoomById(roomId);
-    if (room) {
-      socket.emit("searchedRoom", [room]);
-    } else {
-      socket.emit("searchedRoom", []);
-    }
+    const rooms = getAllRooms();
+    let found = [];
+    rooms.forEach((room) => {
+      if (room.id.includes(roomId)) {
+        console.log(room.id);
+        found.push(room);
+      }
+    });
+    socket.emit("searchedRoom", found);
   });
 
   socket.on("showRooms", () => {
