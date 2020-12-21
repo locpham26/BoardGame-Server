@@ -222,6 +222,7 @@ io.on("connection", (socket) => {
           poisonedPlayer = killPlayer(roomId, poisonedPlayer);
         }
         io.to(roomId).emit("kill", { killedPlayer, poisonedPlayer });
+        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
 
         if (checkWin(roomId)) {
           setTimeout(() => {
@@ -303,7 +304,7 @@ io.on("connection", (socket) => {
       targettedPlayer.votes.push(from);
       io.to(roomId).emit("roomPlayer", getRoomById(roomId));
     } else if (type === "kill") {
-      socket.emit("disable", ["kill", "skip"]);
+      socket.emit("disable", ["kill"]);
       targettedPlayer.votes.push(from);
       room.skippedVotes += 1;
       if (room.skippedVotes === getAllWolves(roomId)) {

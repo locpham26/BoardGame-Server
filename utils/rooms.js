@@ -3,9 +3,32 @@ const _ = require("lodash");
 const rooms = [];
 
 const addRoom = (id) => {
-  const room = { id, isStarted: false, turn: "", playerList: [] };
+  const room = {
+    id,
+    isStarted: false,
+    turn: "",
+    playerList: [],
+    posList: generatePosList(),
+  };
   rooms.push(room);
   return room;
+};
+
+const generatePosList = () => {
+  let posList = [];
+  for (let i = 0; i < 12; i++) {
+    posList.push({ pos: i, taken: false });
+  }
+  return posList;
+};
+
+const assignPos = (roomId) => {
+  const room = getRoomById(roomId);
+  if (room) {
+    let assigned = room.posList.find((position) => !position.taken);
+    assigned.taken = true;
+    return assigned.pos;
+  }
 };
 
 const removeRoom = (roomId) => {
@@ -29,6 +52,7 @@ const addPlayer = (userName, roomId) => {
     const player = {
       name: userName,
       role: "",
+      pos: assignPos(roomId),
       votes: [],
       isAlive: true,
     };
@@ -43,6 +67,12 @@ const removePlayer = (userName, roomId) => {
       (player) => player.name === userName
     );
     if (index !== -1) {
+      const playerPos = room.posList.find(
+        (position) => position.pos === room.playerList[index].pos
+      );
+      if (playerPos) {
+        playerPos.taken = false;
+      }
       room.playerList.splice(index, 1);
     }
   }
