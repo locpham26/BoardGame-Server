@@ -46,10 +46,11 @@ const getRoomById = (roomId) => {
   return rooms.find((room) => room.id === roomId);
 };
 
-const addPlayer = (userName, roomId) => {
+const addPlayer = (socketId, userName, roomId) => {
   const room = getRoomById(roomId);
   if (room) {
     const player = {
+      id: socketId,
       name: userName,
       role: "",
       pos: assignPos(roomId),
