@@ -34,6 +34,7 @@ const {
 } = require("../utils/status");
 
 module.exports = function (server) {
+  //initilize io
   const io = socketio(server, {
     cors: {
       origin: "http://localhost:3001",
@@ -269,24 +270,26 @@ module.exports = function (server) {
           }
         } else if (room.turn === "dayStart") {
           //dayStart
-          clearVotes(roomId);
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+          clearVotes(roomId); //clear votes
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId)); //inform everyone
           room.skippedVotes = 0;
-          let killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
-          let poisonedPlayer = room.poisonedPlayer;
-          const hunter = getHunter(roomId);
+          let killedPlayer = getMaxVotes(getPlayerInRoom(roomId)); //get killed player
+          let poisonedPlayer = room.poisonedPlayer; //get poison player
+          const hunter = getHunter(roomId); //get hunter
 
           if (killedPlayer !== "") {
-            killedPlayer = killPlayer(roomId, killedPlayer);
+            killedPlayer = killPlayer(roomId, killedPlayer); //kill
           }
           if (poisonedPlayer !== "") {
-            poisonedPlayer = killPlayer(roomId, poisonedPlayer);
+            poisonedPlayer = killPlayer(roomId, poisonedPlayer); //poison
           }
           io.to(roomId).emit("kill", { killedPlayer, poisonedPlayer });
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId)); //inform everyone
 
           if (checkWin(roomId)) {
+            //check if anyone wins
             setTimeout(() => {
+              //if there is, clear clock and switch to end game turn
               clearTimeout(timeout);
               room.turn = "gameEnd";
               io.to(roomId).emit("changeTurn", {
@@ -297,9 +300,10 @@ module.exports = function (server) {
             }, 3000);
           } else if (
             hunter &&
-            (hunter.name === killedPlayer || hunter.name === poisonedPlayer)
+            (hunter.name === killedPlayer || hunter.name === poisonedPlayer) //if hunter was killed or poisoned
           ) {
             setTimeout(() => {
+              //clear timeout and switch to hunter's turn
               clearTimeout(timeout);
               room.turn = "hunterDay";
               io.to(roomId).emit("changeTurn", {
@@ -308,96 +312,123 @@ module.exports = function (server) {
               });
             }, 3000);
           } else {
+            //else, proceed as normal
             room.savedPlayer = "";
             room.poisonedPlayer = "";
             io.to(roomId).emit("roomPlayer", getRoomById(roomId));
           }
         } else if (room.turn === "villager" || room.turn === "nightStart") {
+          //night starts
           // io.to(roomId).emit("roomPlayer", getRoomById(roomId));
         } else if (room.turn === "guard") {
-          const protectedPlayer = room.protectedPlayer;
+          //protect
+          const protectedPlayer = room.protectedPlayer; //get the protected player
           io.to(roomId).emit("lastProtected", protectedPlayer);
           room.protectedPlayer = "";
         } else if (room.turn === "witch") {
-          const killedPlayer = getMaxVotes(getPlayerInRoom(roomId));
+          //witch
+          const killedPlayer = getMaxVotes(getPlayerInRoom(roomId)); //inform witch about wolf kill
           io.to(roomId).emit("killedByWolf", killedPlayer);
         } else if (room.turn === "shootDay" || room.turn === "shootNight") {
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+          //huntershoot night
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId)); //inform everyone
         } else if (room.turn === "end") {
-          clearTimeout(timeout);
-          endGame(roomId);
-          io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+          //end game
+          clearTimeout(timeout); //clear clock
+          endGame(roomId); //end game to the room
+          io.to(roomId).emit("roomPlayer", getRoomById(roomId)); //inform everyone
         }
       }
     });
 
+    //handle skip turn
     socket.on("skipTurn", ({ roomId }) => {
       const room = getRoomById(roomId);
       if (room.turn !== "villager" && room.turn !== "wolf") {
+        //skip when not villager or wolf's turns
         io.to(roomId).emit("changeTurn", {
           roomTurn: room.turn,
           skipped: true,
-        });
+        }); //skip
       } else if (room.turn === "villager") {
-        room.skippedVotes += 1;
+        //skip when villager's turn
+        room.skippedVotes += 1; //increment skipped vote list
         if (room.skippedVotes === getPlayerInRoom(roomId).length) {
           io.to(roomId).emit("changeTurn", {
             roomTurn: room.turn,
             skipped: true,
-          });
+          }); //skip
         }
       } else if (room.turn === "wolf") {
-        room.skippedVotes += 1;
+        //skip when wolf's turn
+        room.skippedVotes += 1; //increment skipped vote list
         if (room.skippedVotes === getAllWolves(roomId)) {
           io.to(roomId).emit("changeTurn", {
             roomTurn: room.turn,
             skipped: true,
-          });
+          }); //skip
         }
       }
     });
 
+    //hanlde player's in-game actions
     socket.on("playerAction", ({ from, target, type, roomId }) => {
+      //log the action on console
       console.log(from, type, target);
+      //get room and targetted player
       const room = getRoomById(roomId);
       const targettedPlayer = getPlayer(roomId, target);
 
+      //switch type
+
+      //vote
       if (type === "vote") {
+        //check if this player has voted before
         hasVoted(getPlayerInRoom(roomId), from);
+        //if not, push to the vote list of the targetted
         targettedPlayer.votes.push(from);
+        //inform everyone
         io.to(roomId).emit("roomPlayer", getRoomById(roomId));
       } else if (type === "kill") {
-        socket.emit("disable", ["kill"]);
-        targettedPlayer.votes.push(from);
-        room.skippedVotes += 1;
+        //kill
+        socket.emit("disable", ["kill"]); //no more than 1 kill each night
+        targettedPlayer.votes.push(from); //push kill vote
+        room.skippedVotes += 1; //already committed the aciton
         if (room.skippedVotes === getAllWolves(roomId)) {
+          //if all wolves has voted, switch to next turn
           io.to(roomId).emit("changeTurn", {
             roomTurn: room.turn,
             skipped: true,
           });
         }
-        io.to(roomId).emit("roomPlayer", getRoomById(roomId));
+        io.to(roomId).emit("roomPlayer", getRoomById(roomId)); //inform everyone
       } else if (type === "protect") {
-        socket.emit("disable", ["protect"]);
-        protectPlayer(roomId, target);
+        //protect
+        socket.emit("disable", ["protect"]); //1 protect per night
+        protectPlayer(roomId, target); //set protected
       } else if (type === "check") {
-        socket.emit("disable", ["check"]);
+        //check
+        socket.emit("disable", ["check"]); //1 check per night
         socket.emit("reveal", {
           checkTarget: targettedPlayer.name,
           isWolf: targettedPlayer.role === "wolf",
-        });
+        }); //reveal targetted's role
       } else if (type === "shoot") {
-        socket.emit("disable", ["shoot"]);
-        targettedPlayer.isAlive = false;
-        socket.emit("hunterShoot", targettedPlayer.name);
+        //shoot
+        socket.emit("disable", ["shoot"]); //1 shoot only
+        targettedPlayer.isAlive = false; //kill the shooted
+        socket.emit("hunterShoot", targettedPlayer.name); //inform everyone
       } else if (type === "save") {
-        savePlayer(roomId, target);
-        socket.emit("disable", ["save"]);
+        //save
+        savePlayer(roomId, target); //set saved
+        socket.emit("disable", ["save"]); //1 save only
       } else if (type === "poison") {
-        poisonPlayer(roomId, target);
-        socket.emit("disable", ["poison"]);
+        //poison
+        poisonPlayer(roomId, target); //poison the targetted
+        socket.emit("disable", ["poison"]); //1 poison only
       } else if (type === "skip") {
-        socket.emit("disable", ["vote", "kill", "skip"]);
+        //skip turn
+        socket.emit("disable", ["vote", "kill", "skip"]); //1 skip only
       }
     });
   });

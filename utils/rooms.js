@@ -3,6 +3,7 @@ const _ = require("lodash");
 const rooms = [];
 
 const addRoom = (id) => {
+  //create a room
   const room = {
     id,
     isStarted: false,
@@ -15,6 +16,7 @@ const addRoom = (id) => {
 };
 
 const generatePosList = () => {
+  //generate position list for players
   let posList = [];
   for (let i = 0; i < 12; i++) {
     posList.push({ pos: i, taken: false });
@@ -23,6 +25,7 @@ const generatePosList = () => {
 };
 
 const assignPos = (roomId) => {
+  //assign position to players in room
   const room = getRoomById(roomId);
   if (room) {
     let assigned = room.posList.find((position) => !position.taken);
@@ -32,6 +35,7 @@ const assignPos = (roomId) => {
 };
 
 const removeRoom = (roomId) => {
+  //remove rooms
   if (rooms.length > 0) {
     const roomIndex = rooms.findIndex((room) => room.id === roomId);
     if (roomIndex) rooms.splice(roomIndex, 1);
@@ -39,14 +43,17 @@ const removeRoom = (roomId) => {
 };
 
 const getAllRooms = () => {
+  //get all rooms
   return rooms.filter((room) => !room.isStarted && room.playerList.length > 0);
 };
 
 const getRoomById = (roomId) => {
+  //get room by id
   return rooms.find((room) => room.id === roomId);
 };
 
 const addPlayer = (socketId, userName, roomId) => {
+  //add player to room
   const room = getRoomById(roomId);
   if (room) {
     const player = {
@@ -62,6 +69,7 @@ const addPlayer = (socketId, userName, roomId) => {
 };
 
 const removePlayer = (userName, roomId) => {
+  //remove player from room
   const room = getRoomById(roomId);
   if (room) {
     const index = room.playerList.findIndex(
@@ -80,11 +88,13 @@ const removePlayer = (userName, roomId) => {
 };
 
 const getPlayerInRoom = (roomId) => {
+  //get all players in room
   const room = getRoomById(roomId);
   if (room) return room.playerList;
 };
 
 const getAllWolves = (roomId) => {
+  //get all wolves players
   const room = getRoomById(roomId);
   if (room) {
     return room.playerList.filter(
@@ -94,6 +104,7 @@ const getAllWolves = (roomId) => {
 };
 
 const getAllHuman = (roomId) => {
+  //get all non-wolf players
   const room = getRoomById(roomId);
   if (room) {
     return room.playerList.filter(
@@ -103,6 +114,7 @@ const getAllHuman = (roomId) => {
 };
 
 const checkWin = (roomId) => {
+  //check win
   if (getAllWolves(roomId) >= getAllHuman(roomId)) {
     return "wolf";
   } else if (getAllWolves(roomId) === 0) {
@@ -113,6 +125,7 @@ const checkWin = (roomId) => {
 };
 
 const startGame = (roomId) => {
+  //start game
   const room = getRoomById(roomId);
   if (room) {
     room.isStarted = true;
@@ -125,6 +138,7 @@ const startGame = (roomId) => {
 };
 
 const endGame = (roomId) => {
+  //end game
   const room = getRoomById(roomId);
   if (room) {
     room.isStarted = false;
@@ -140,6 +154,7 @@ const endGame = (roomId) => {
 };
 
 const getPlayer = (roomId, playerName) => {
+  //get player by name
   const room = getRoomById(roomId);
   if (room) {
     const player = room.playerList.find((player) => player.name === playerName);
@@ -148,6 +163,7 @@ const getPlayer = (roomId, playerName) => {
 };
 
 const hasVoted = (playerList, playerName) => {
+  //check if this player has voted
   if (playerList) {
     const player = playerList.find((player) =>
       player.votes.includes(playerName)
@@ -160,6 +176,7 @@ const hasVoted = (playerList, playerName) => {
 };
 
 const getMaxVotes = (playerList) => {
+  //get player with the most votes
   let hasEqualVote = false;
   let mostVoted = playerList[0].name;
   let maxVote = playerList[0].votes.length;
@@ -182,6 +199,7 @@ const getMaxVotes = (playerList) => {
 };
 
 const killPlayer = (roomId, playerName) => {
+  //kill player
   const room = getRoomById(roomId);
   if (room) {
     const killed = getPlayer(roomId, playerName);
@@ -198,11 +216,13 @@ const killPlayer = (roomId, playerName) => {
 };
 
 const hangPlayer = (roomId, playerName) => {
+  //hand player
   const hanged = getPlayer(roomId, playerName);
   hanged.isAlive = false;
 };
 
 const clearVotes = (roomId) => {
+  //clear votes
   const room = getRoomById(roomId);
   if (room) {
     room.playerList.forEach((player) => {
@@ -212,6 +232,7 @@ const clearVotes = (roomId) => {
 };
 
 const protectPlayer = (roomId, playerName) => {
+  //protect player
   const room = getRoomById(roomId);
   if (room) {
     if (playerName !== room.protectedPlayer) {
@@ -221,6 +242,7 @@ const protectPlayer = (roomId, playerName) => {
 };
 
 const savePlayer = (roomId, playerName) => {
+  //save player
   const room = getRoomById(roomId);
   if (room) {
     if (playerName !== room.savedPlayer) {
@@ -230,6 +252,7 @@ const savePlayer = (roomId, playerName) => {
 };
 
 const poisonPlayer = (roomId, playerName) => {
+  //poison player
   const room = getRoomById(roomId);
   if (room) {
     room.poisonedPlayer = playerName;
@@ -237,6 +260,7 @@ const poisonPlayer = (roomId, playerName) => {
 };
 
 const getHunter = (roomId) => {
+  //get the hunter
   const room = getRoomById(roomId);
   if (room) {
     const hunter = room.playerList.find((player) => player.role === "hunter");
@@ -244,6 +268,7 @@ const getHunter = (roomId) => {
   }
 };
 
+//assign roles to players based on playerNum
 const assignRole = (playerList) => {
   let roles = [];
   if (playerList.length === 6) {
@@ -282,6 +307,7 @@ const assignRole = (playerList) => {
   }
 };
 
+//handle turn switched
 const switchTurn = (turn) => {
   let newTurn;
   let time;
